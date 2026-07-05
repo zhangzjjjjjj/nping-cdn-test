@@ -217,8 +217,8 @@ bar() {
   local fill=$(( done * width / total ))
   local empty=$(( width - fill ))
   printf "["
-  printf "%${fill}s" | tr ' ' '█'
-  printf "%${empty}s" | tr ' ' '░'
+  printf "%${fill}s" | tr ' ' '#'
+  printf "%${empty}s" | tr ' ' '-'
   printf "] %d/%d (%d%%)" "$done" "$total" "$pct"
 }
 
@@ -245,12 +245,12 @@ show_provider_summary() {
     l = loss + 0
     v = lat + 0
     if (status != "OK" || rcv + 0 == 0) {
-      return red "█" nc "  FAIL      "
+      return red "!" nc "  FAIL      "
     }
-    if      (v <= 80)  block = "▁"
-    else if (v <= 160) block = "▃"
-    else if (v <= 240) block = "▆"
-    else               block = "█"
+    if      (v <= 80)  block = "."
+    else if (v <= 160) block = ":"
+    else if (v <= 240) block = "*"
+    else               block = "!"
 
     if      (l > 20 || v > 240) color = red
     else if (l > 0  || v > 150) color = yellow
@@ -278,8 +278,15 @@ show_provider_summary() {
       prov = order[i]
       printf "  %s%-8s%s  %s  %s  %s\n", cyan, prov, nc, data[prov SUBSEP "电信"], data[prov SUBSEP "联通"], data[prov SUBSEP "移动"]
     }
-    printf "  %s图例: %s▁≤80ms%s  %s▃≤160ms%s  %s▆≤240ms%s  %s█>240ms/失败%s；黄色表示有丢包或延迟>150ms，红色表示严重丢包/失败。\n\n", dim, green, dim, green, dim, yellow, dim, red, dim
+    printf "  %s图例: %s.<=80ms%s  %s:<=160ms%s  %s*<=240ms%s  %s!>240ms/失败%s；黄色表示有丢包或延迟>150ms，红色表示严重丢包/失败。\n\n", dim, green, dim, green, dim, yellow, dim, red, dim
   }' "$file"
+}
+
+print_header() {
+  local suffix="$1"
+  echo -e "${BOLD}${CYAN}Zstatic CDN 节点 TCP 丢包探测${suffix}${NC}"
+  echo -e "${DIM}协议: 裸 TCP SYN (nping) · 无重传${NC}"
+  echo -e "${DIM}------------------------------------------------------------${NC}"
 }
 
 # ===================== 单节点测试 =====================
@@ -316,12 +323,7 @@ export RESULT_DIR PACKETS
 # ===================== 主流程 =====================
 main() {
   clear
-  echo -e "${BOLD}${CYAN}"
-  echo "  ╔══════════════════════════════════════════════════════╗"
-  echo "  ║       Zstatic CDN 节点 TCP 丢包探测               ║"
-  echo "  ║       协议: 裸 TCP SYN (nping) · 无重传            ║"
-  echo "  ╚══════════════════════════════════════════════════════╝"
-  echo -e "${NC}"
+  print_header ""
   echo -e "${DIM}  节点: $TOTAL  每节点发包: $PACKETS  并行: $PARALLEL  端口: 80/tcp${NC}"
   echo ""
 
@@ -368,11 +370,7 @@ main() {
 
   # ---- TUI 结果展示 ----
   clear
-  echo -e "${BOLD}${CYAN}"
-  echo "  ╔══════════════════════════════════════════════════════╗"
-  echo "  ║       Zstatic CDN 节点 TCP 丢包探测 · 结果        ║"
-  echo "  ╚══════════════════════════════════════════════════════╝"
-  echo -e "${NC}"
+  print_header " · 结果"
   echo -e "${DIM}  nping 裸 SYN  ·  每节点 ${PACKETS} 包  ·  端口 80${NC}"
   echo ""
 
