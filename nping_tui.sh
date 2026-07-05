@@ -241,22 +241,18 @@ show_provider_summary() {
     sub(/\.00$/, "", v)
     return v
   }
-  function cell(status, loss, lat, rcv,   l, v, block, color) {
+  function cell(status, loss, lat, rcv,   l, v, color) {
     l = loss + 0
     v = lat + 0
     if (status != "OK" || rcv + 0 == 0) {
-      return red "!" nc "  FAIL      "
+      return red "失败" nc
     }
-    if      (v <= 80)  block = "."
-    else if (v <= 160) block = ":"
-    else if (v <= 240) block = "*"
-    else               block = "!"
 
     if      (l > 20 || v > 240) color = red
     else if (l > 0  || v > 150) color = yellow
     else                        color = green
 
-    return color block nc sprintf(" %4.0fms/%-4s", v, compact_loss(loss) "%")
+    return color sprintf("%3.0fms/%s", v, compact_loss(loss) "%") nc
   }
   {
     status = $1
@@ -273,12 +269,11 @@ show_provider_summary() {
   }
   END {
     printf "  %s%s三网概览%s %s(电信 | 联通 | 移动)%s\n", bold, cyan, nc, dim, nc
-    printf "  %s%-8s  %-15s %-15s %-15s%s\n", dim, "省份", "电信", "联通", "移动", nc
     for (i = 1; i <= n; i++) {
       prov = order[i]
-      printf "  %s%-8s%s  %s  %s  %s\n", cyan, prov, nc, data[prov SUBSEP "电信"], data[prov SUBSEP "联通"], data[prov SUBSEP "移动"]
+      printf "  %s%-8s%s  电信 %s  联通 %s  移动 %s\n", cyan, prov, nc, data[prov SUBSEP "电信"], data[prov SUBSEP "联通"], data[prov SUBSEP "移动"]
     }
-    printf "  %s图例: %s.<=80ms%s  %s:<=160ms%s  %s*<=240ms%s  %s!>240ms/失败%s；黄色表示有丢包或延迟>150ms，红色表示严重丢包/失败。\n\n", dim, green, dim, green, dim, yellow, dim, red, dim
+    printf "  %s颜色: %s正常%s  %s有丢包或延迟>150ms%s  %s严重丢包/失败%s\n\n", dim, green, dim, yellow, dim, red, dim
   }' "$file"
 }
 
@@ -393,13 +388,11 @@ main() {
   show_provider_summary "$sorted_file"
 
   echo -e "  ${BOLD}详细结果${NC}"
-  printf "  ${DIM}%-8s %-4s %-10s %-8s %-8s${NC}\n" "省份" "运营商" "丢包率" "收包" "延迟"
-  printf "  ${DIM}%-8s %-4s %-10s %-8s %-8s${NC}\n" "--------" "----" "----------" "--------" "--------"
 
   # 按运营商+省份排序展示
   sort -t'|' -k3,3 -k2,2 "$sorted_file" | while IFS='|' read -r status prov isp host ip snd rcv loss lat; do
     [ "$status" = "FAIL" ] && {
-      printf "  ${CYAN}%-8s${NC} %-4s ${RED}%-10s${NC} %-8s %-8s\n" "$prov" "$isp" "DNS/失败" "-" "-"
+      printf "  ${CYAN}%s${NC} %s ${RED}DNS/失败${NC}\n" "$prov" "$isp"
       continue
     }
 
@@ -410,7 +403,7 @@ main() {
     local ld
     ld=$(loss_color "$loss")
 
-    printf "  ${CYAN}%-8s${NC} %-4s %8b %4s/%-3s %8sms\n" \
+    printf "  ${CYAN}%s${NC} %s 丢包=%b 收包=%s/%s 延迟=%sms\n" \
       "$prov" "$isp" "$ld" "$rcv" "$snd" "$lat"
   done
 
